@@ -663,7 +663,10 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
         },
         cancelUpload(taskId) {
             let task = this.uploadQueue.find(t => t.id === taskId);
-            if (task && task.progress < 100) {
+            if (!task) return;
+
+            // Only notify backend if the task is actually running and not already terminal
+            if (task.progress < 100 && !task.isCancelled && !task.hasError) {
                 task.statusText = this.t('cancelled');
                 
                 // Notify backend to cancel the task and clean up temporary files
@@ -672,6 +675,9 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
                 fd.append('filename', task.name);
                 fetch('/api/cancel_upload', { method: 'POST', body: fd, headers: { 'X-CSRF-Token': TeleCloud.getCsrfToken() } }).catch(e => console.error("Cancel failed:", e));
             }
+
+            // Always remove from UI when user clicks "X"
+            this.uploadQueue = this.uploadQueue.filter(t => t.id !== taskId);
         },
         toastModal: { show: false, message: '', type: 'success', persistent: false },
         toastTimeout: null,
@@ -1055,6 +1061,8 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
         navigateToIndex(index) { if (this.isLoading || this.isRefreshing) return; this.currentPath = '/' + this.getBreadcrumbs().slice(0, index + 1).join('/'); this.fetchFiles(); },
         navigateTo(path) { if (this.isLoading || this.isRefreshing) return; this.currentPath = path; this.fetchFiles(); },
         async fetchFiles(silentLoad = false) {
+            if (this.isLoading || this.isRefreshing) return;
+            const startTime = Date.now();
             if (!silentLoad && (!this.files || this.files.length === 0)) { this.isLoading = true; } else { this.isRefreshing = true; }
             try {
                 const res = await fetch(`/api/files?path=${encodeURIComponent(this.currentPath)}`);
@@ -1074,7 +1082,11 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
                 if (data.storage_used !== undefined) this.storageUsed = data.storage_used;
                 this.selectedIds = this.selectedIds.filter(id => this.files.some(f => f.id === id));
                 if (!silentLoad) { this.searchQuery = ''; this.currentPage = 1; } else { if (this.currentPage > this.totalPages) this.currentPage = Math.max(1, this.totalPages); }
-            } catch (e) { console.error('Fetch error', e); } finally { this.isLoading = false; this.isRefreshing = false; }
+            } catch (e) { console.error('Fetch error', e); } finally { 
+                const elapsed = Date.now() - startTime;
+                if (elapsed < 500 && this.isRefreshing) await new Promise(r => setTimeout(r, 500 - elapsed));
+                this.isLoading = false; this.isRefreshing = false; 
+            }
         },
         async createNewFolder() {
             const name = await this.customPrompt(this.t('new_folder_title'), "");
@@ -1136,6 +1148,10 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
             
             const urls = this.remoteUrl.split('\n').map(u => u.trim()).filter(u => u !== '');
             if (urls.length === 0) return;
+            if (urls.length > 50) {
+                this.showToast(this.t('err_max_urls').replace('{n}', 50), 'error');
+                return;
+            }
 
             this.remoteUploadModal = false;
             const originalUrls = this.remoteUrl;
@@ -1336,6 +1352,10 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
             return files;
         },
         async uploadFiles(fileList) {
+            if (fileList.length > 200) {
+                this.showToast(this.t('err_max_files').replace('{n}', 200), 'error');
+                return;
+            }
             const newTasks = [];
             
             // Check for existing files
@@ -1455,6 +1475,7 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
             task.progress = 0;
             task.statusText = this.t('preparing_upload');
             task.isCancelled = false;
+            task.hasError = false;
             
             await this.uploadSingleFile(task.file, taskId, task.targetPath, task.overwrite);
         },
@@ -2218,6 +2239,8 @@ function shareApp(shareToken) {
         navigateToIndex(index) { if (this.isLoading || this.isRefreshing) return; this.currentPath = '/' + this.getBreadcrumbs().slice(0, index + 1).join('/'); this.fetchFiles(); },
         navigateTo(path) { if (this.isLoading || this.isRefreshing) return; this.currentPath = path; this.fetchFiles(); },
         async fetchFiles(silentLoad = false) {
+            if (this.isLoading || this.isRefreshing) return;
+            const startTime = Date.now();
             if (!silentLoad && (!this.files || this.files.length === 0)) { this.isLoading = true; } else { this.isRefreshing = true; }
             try {
                 const res = await fetch(`/s/${this.shareToken}/api/files?path=${encodeURIComponent(this.currentPath)}`);
@@ -2226,7 +2249,11 @@ function shareApp(shareToken) {
                 this.totalSize = data.total_size || 0;
                 this.selectedIds = this.selectedIds.filter(id => this.files.some(f => f.id === id));
                 if (!silentLoad) { this.searchQuery = ''; this.currentPage = 1; } else { if (this.currentPage > this.totalPages) this.currentPage = Math.max(1, this.totalPages); }
-            } catch (e) { console.error('Fetch error', e); } finally { this.isLoading = false; this.isRefreshing = false; }
+            } catch (e) { console.error('Fetch error', e); } finally { 
+                const elapsed = Date.now() - startTime;
+                if (elapsed < 500 && this.isRefreshing) await new Promise(r => setTimeout(r, 500 - elapsed));
+                this.isLoading = false; this.isRefreshing = false; 
+            }
         },
         
         closeFileInfoModal() {
