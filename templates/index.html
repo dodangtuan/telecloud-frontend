@@ -47,7 +47,7 @@
 <body
     class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 h-full relative overflow-hidden flex flex-col transition-colors duration-500"
     :data-theme="currentTheme"
-    x-data="cloudApp(true, {{ if .is_admin }}true{{ else }}false{{ end }}, {{ .storage_used }}, {{ if .webdav_enabled }}true{{ else }}false{{ end }}, '{{ .webdav_user }}', '{{ .webdav_password }}', {{ if .upload_api_enabled }}true{{ else }}false{{ end }}, '{{ .upload_api_key }}', {{ if .global_webdav_enabled }}true{{ else }}false{{ end }}, {{ if .global_api_enabled }}true{{ else }}false{{ end }}, '{{ .webauthn_rpid }}', '{{ .webauthn_rporigin }}', '{{ .theme }}', {{ if .s3_enabled }}true{{ else }}false{{ end }}, '{{ .s3_access_key }}', '{{ .s3_secret_key }}', {{ if .global_s3_enabled }}true{{ else }}false{{ end }})"
+    x-data="cloudApp(true, {{ if .is_admin }}true{{ else }}false{{ end }}, {{ .storage_used }}, {{ if .webdav_enabled }}true{{ else }}false{{ end }}, '{{ .webdav_user }}', '{{ .webdav_password }}', {{ if .upload_api_enabled }}true{{ else }}false{{ end }}, '{{ .upload_api_key }}', {{ if .global_webdav_enabled }}true{{ else }}false{{ end }}, {{ if .global_api_enabled }}true{{ else }}false{{ end }}, '{{ .webauthn_rpid }}', '{{ .webauthn_rporigin }}', '{{ .theme }}', {{ if .s3_enabled }}true{{ else }}false{{ end }}, '{{ .s3_access_key }}', '{{ .s3_secret_key }}', {{ if .global_s3_enabled }}true{{ else }}false{{ end }}, {{ if .force_change }}true{{ else }}false{{ end }})"
     @dragover.prevent="dragOver = true" @dragleave.prevent="dragOver = false" @drop.prevent="handleDrop($event)">
 
     <div class="blob-1"></div>
@@ -183,7 +183,7 @@
         <div @click.outside="if(modal.type==='alert') closeUIModal(null)"
             class="glass-menu w-[90%] max-w-sm rounded-[2rem] p-6 shadow-2xl animate-modal-in border border-white/20">
             <h3 class="text-xl font-bold mb-2 text-slate-900 dark:text-white" x-text="modal.title"></h3>
-            <p class="text-slate-600 dark:text-slate-300 text-sm mb-5" x-text="modal.message" x-show="modal.message">
+            <p class="text-slate-600 dark:text-slate-300 text-sm mb-5" x-html="modal.message" x-show="modal.message">
             </p>
             <template x-if="modal.type === 'prompt'">
                 <input :type="modal.inputType || 'text'" x-model="modal.input" x-ref="modalInput"
@@ -691,7 +691,7 @@
                                     <span
                                         x-text="(!isAdmin && !globalWebdavEnabled) ? t('err_admin_disabled') : (isAdmin ? t('admin_toggle_note') : t('child_toggle_note'))"></span>
                                 </p>
-                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4" x-text="t('webdav_desc')">
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4" x-html="t('webdav_desc')">
                                 </p>
 
                                 <div x-show="webdavEnabled" x-collapse>
@@ -765,7 +765,7 @@
                                     <span
                                         x-text="(!isAdmin && !globalS3Enabled) ? t('err_admin_disabled') : (isAdmin ? t('admin_toggle_note') : t('child_toggle_note'))"></span>
                                 </p>
-                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4" x-text="t('s3_desc')">
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4" x-html="t('s3_desc')">
                                 </p>
 
                                 <div x-show="s3Enabled" x-collapse>
@@ -881,23 +881,78 @@
                                 <div x-show="uploadAPIEnabled" x-collapse>
                                     <div class="space-y-4 pt-2">
 
-                                        <!-- Endpoint -->
-                                        <div>
-                                            <label
-                                                class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block"
-                                                x-text="t('upload_api_endpoint')"></label>
-                                            <div class="flex items-center gap-2">
-                                                <div
-                                                    class="flex-1 p-3 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-xs break-all text-violet-700 dark:text-violet-300">
-                                                    <span class="text-slate-500 dark:text-slate-400 mr-1">POST</span>
-                                                    <span
-                                                        x-text="window.location.origin + '/api/upload-api/upload'"></span>
+                                        <!-- Endpoints -->
+                                        <div class="space-y-3">
+                                            <!-- Upload -->
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block"
+                                                    x-text="t('upload')"></label>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="flex-1 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-[10px] break-all text-violet-700 dark:text-violet-300">
+                                                        <span class="text-slate-500 dark:text-slate-400 mr-1">POST</span>
+                                                        <span x-text="window.location.origin + '/api/upload-api/upload'"></span>
+                                                    </div>
+                                                    <button @click="TeleCloud.copyToClipboard(window.location.origin + '/api/upload-api/upload'); showToast(t('toast_copied', {t: 'URL'}), 'success')"
+                                                        class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-violet-600 hover:text-white transition-all shrink-0">
+                                                        <i class="fa-solid fa-copy text-xs"></i>
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    @click="TeleCloud.copyToClipboard(window.location.origin + '/api/upload-api/upload'); showToast(t('toast_copied', {t: 'URL'}), 'success')"
-                                                    class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-violet-600 hover:text-white transition-all shrink-0">
-                                                    <i class="fa-solid fa-copy"></i>
-                                                </button>
+                                            </div>
+
+                                            <!-- Remote Upload -->
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block"
+                                                    x-text="t('upload_api_remote_endpoint')"></label>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="flex-1 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-[10px] break-all text-violet-700 dark:text-violet-300">
+                                                        <span class="text-slate-500 dark:text-slate-400 mr-1">POST</span>
+                                                        <span x-text="window.location.origin + '/api/upload-api/remote'"></span>
+                                                    </div>
+                                                    <button @click="TeleCloud.copyToClipboard(window.location.origin + '/api/upload-api/remote'); showToast(t('toast_copied', {t: 'URL'}), 'success')"
+                                                        class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-violet-600 hover:text-white transition-all shrink-0">
+                                                        <i class="fa-solid fa-copy text-xs"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Status & Cancel -->
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div>
+                                                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block"
+                                                        x-text="t('upload_api_status_endpoint')"></label>
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="flex-1 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-[10px] break-all text-violet-700 dark:text-violet-300">
+                                                            <span class="text-slate-500 dark:text-slate-400 mr-1">GET</span>
+                                                            <span x-text="'.../tasks/:id'"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block"
+                                                        x-text="t('upload_api_cancel_endpoint')"></label>
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="flex-1 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-[10px] break-all text-violet-700 dark:text-violet-300">
+                                                            <span class="text-slate-500 dark:text-slate-400 mr-1">DELETE</span>
+                                                            <span x-text="'.../tasks/:id'"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Share Path -->
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block"
+                                                    x-text="t('upload_api_share_endpoint')"></label>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="flex-1 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-[10px] break-all text-violet-700 dark:text-violet-300">
+                                                        <span class="text-slate-500 dark:text-slate-400 mr-1">POST</span>
+                                                        <span x-text="window.location.origin + '/api/upload-api/share'"></span>
+                                                    </div>
+                                                    <button @click="TeleCloud.copyToClipboard(window.location.origin + '/api/upload-api/share'); showToast(t('toast_copied', {t: 'URL'}), 'success')"
+                                                        class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-violet-600 hover:text-white transition-all shrink-0">
+                                                        <i class="fa-solid fa-copy text-xs"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1016,7 +1071,79 @@
   -F 'path=/' \\
   -F 'async=true'`"></code></pre>
                                                     <button
-                                                        @click="TeleCloud.copyToClipboard(`curl -X POST ${window.location.origin}/api/upload-api/upload -H 'Authorization: Bearer ${uploadAPIKey}' -F 'file=@/path/to/yourfile.txt' -F 'path=/' -F 'async=true'`); showToast(t('toast_copied', {t: 'cURL'}), 'success')"
+                                                        @click="TeleCloud.copyToClipboard(`curl -X POST ${window.location.origin}/api/upload-api/upload -H 'Authorization: Bearer ${isAdmin ? uploadAPIKey : childAPIKey}' -F 'file=@/path/to/yourfile.txt' -F 'path=/' -F 'async=true'`); showToast(t('toast_copied', {t: 'cURL'}), 'success')"
+                                                        class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-700 hover:bg-violet-600 text-white rounded-lg transition-all text-[10px]">
+                                                        <i class="fa-solid fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <!-- cURL example for status -->
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5"
+                                                    x-text="t('upload_api_status_endpoint')"></p>
+                                                <div class="relative group">
+                                                    <pre
+                                                        class="bg-slate-900 dark:bg-slate-950 text-emerald-400 p-3 rounded-xl text-[10px] leading-relaxed overflow-x-auto whitespace-pre-wrap break-all"><code x-text="`curl -X GET ${window.location.origin}/api/upload-api/tasks/<TASK_ID> \\
+  -H 'Authorization: Bearer <YOUR_API_KEY>'`"></code></pre>
+                                                    <button
+                                                        @click="TeleCloud.copyToClipboard(`curl -X GET ${window.location.origin}/api/upload-api/tasks/<TASK_ID> -H 'Authorization: Bearer ${isAdmin ? uploadAPIKey : childAPIKey}'`); showToast(t('toast_copied', {t: 'cURL'}), 'success')"
+                                                        class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-700 hover:bg-violet-600 text-white rounded-lg transition-all text-[10px]">
+                                                        <i class="fa-solid fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- cURL example for cancel -->
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5"
+                                                    x-text="t('upload_api_cancel_endpoint')"></p>
+                                                <div class="relative group">
+                                                    <pre
+                                                        class="bg-slate-900 dark:bg-slate-950 text-emerald-400 p-3 rounded-xl text-[10px] leading-relaxed overflow-x-auto whitespace-pre-wrap break-all"><code x-text="`curl -X DELETE ${window.location.origin}/api/upload-api/tasks/<TASK_ID> \\
+  -H 'Authorization: Bearer <YOUR_API_KEY>'`"></code></pre>
+                                                    <button
+                                                        @click="TeleCloud.copyToClipboard(`curl -X DELETE ${window.location.origin}/api/upload-api/tasks/<TASK_ID> -H 'Authorization: Bearer ${isAdmin ? uploadAPIKey : childAPIKey}'`); showToast(t('toast_copied', {t: 'cURL'}), 'success')"
+                                                        class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-700 hover:bg-violet-600 text-white rounded-lg transition-all text-[10px]">
+                                                        <i class="fa-solid fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <!-- cURL example for remote -->
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5"
+                                                    x-text="t('upload_api_remote_endpoint') + ' (JSON)'"></p>
+                                                <div class="relative group">
+                                                    <pre
+                                                        class="bg-slate-900 dark:bg-slate-950 text-emerald-400 p-3 rounded-xl text-[10px] leading-relaxed overflow-x-auto whitespace-pre-wrap break-all"><code x-text="`curl -X POST ${window.location.origin}/api/upload-api/remote \\
+  -H 'Authorization: Bearer <YOUR_API_KEY>' \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    &quot;url&quot;: &quot;https://example.com/file.zip&quot;,
+    &quot;path&quot;: &quot;/&quot;,
+    &quot;async&quot;: true
+  }'`"></code></pre>
+                                                    <button
+                                                        @click="TeleCloud.copyToClipboard(`curl -X POST ${window.location.origin}/api/upload-api/remote -H 'Authorization: Bearer ${isAdmin ? uploadAPIKey : childAPIKey}' -H 'Content-Type: application/json' -d '{&quot;url&quot;: &quot;https://example.com/file.zip&quot;, &quot;path&quot;: &quot;/&quot;, &quot;async&quot;: true}'`); showToast(t('toast_copied', {t: 'cURL'}), 'success')"
+                                                        class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-700 hover:bg-violet-600 text-white rounded-lg transition-all text-[10px]">
+                                                        <i class="fa-solid fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- cURL example for share -->
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5"
+                                                    x-text="t('upload_api_share_endpoint') + ' (JSON)'"></p>
+                                                <div class="relative group">
+                                                    <pre
+                                                        class="bg-slate-900 dark:bg-slate-950 text-emerald-400 p-3 rounded-xl text-[10px] leading-relaxed overflow-x-auto whitespace-pre-wrap break-all"><code x-text="`curl -X POST ${window.location.origin}/api/upload-api/share \\
+  -H 'Authorization: Bearer <YOUR_API_KEY>' \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    &quot;path&quot;: &quot;/yourfile_or_folder&quot;
+  }'`"></code></pre>
+                                                    <button
+                                                        @click="TeleCloud.copyToClipboard(`curl -X POST ${window.location.origin}/api/upload-api/share -H 'Authorization: Bearer ${isAdmin ? uploadAPIKey : childAPIKey}' -H 'Content-Type: application/json' -d '{&quot;path&quot;: &quot;/yourfile_or_folder&quot;}'`); showToast(t('toast_copied', {t: 'cURL'}), 'success')"
                                                         class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-700 hover:bg-violet-600 text-white rounded-lg transition-all text-[10px]">
                                                         <i class="fa-solid fa-copy"></i>
                                                     </button>
@@ -1053,6 +1180,18 @@
                                                         <span class="text-slate-500 dark:text-slate-400"
                                                             x-text="t('upload_api_param_async')"></span>
                                                     </div>
+                                                    <div class="flex items-start gap-2">
+                                                        <span
+                                                            class="font-mono bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded text-[10px] shrink-0">url</span>
+                                                        <span class="text-slate-500 dark:text-slate-400"
+                                                            x-text="t('upload_api_param_url')"></span>
+                                                    </div>
+                                                    <div class="flex items-start gap-2">
+                                                        <span
+                                                            class="font-mono bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded text-[10px] shrink-0">overwrite</span>
+                                                        <span class="text-slate-500 dark:text-slate-400"
+                                                            x-text="t('upload_api_param_overwrite')"></span>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -1077,7 +1216,7 @@
   "file_id":      42,
   "share_token":  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "share_link":   "https://yourhost/s/&lt;token&gt;",
-  "direct_link":  "https://yourhost/dl/&lt;signed-token&gt;"
+  "direct_link":  "https://yourhost/dl/&lt;signed-token&gt;" // Omitted for folders
 }</code></pre>
                                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-1"
                                                     x-text="t('response_async')"></p>
@@ -1087,6 +1226,30 @@
   "task_id":  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "filename": "yourfile.txt",
   "path":     "/"
+}</code></pre>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-1"
+                                                    x-text="t('upload_api_status_endpoint')"></p>
+                                                <pre
+                                                    class="bg-slate-900 dark:bg-slate-950 text-blue-300 p-3 rounded-xl text-[10px] leading-relaxed overflow-x-auto"><code>{
+  "task_id":  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "status":   "downloading",
+  "percent":  45,
+  "msg":      "initiating_request",
+  "file_id":  0,
+  "filename": "yourfile.txt",
+  "size":     104857600,
+  "uploaded": 47185920
+}</code></pre>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-1"
+                                                    x-text="t('upload_api_cancel_endpoint')"></p>
+                                                <pre
+                                                    class="bg-slate-900 dark:bg-slate-950 text-blue-300 p-3 rounded-xl text-[10px] leading-relaxed overflow-x-auto"><code>{
+  "status": "cancelled"
+}</code></pre>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-1" x-text="t('status_error')"></p>
+                                                <pre
+                                                    class="bg-slate-900 dark:bg-slate-950 text-blue-300 p-3 rounded-xl text-[10px] leading-relaxed overflow-x-auto"><code>{
+  "error": "Detailed error message"
 }</code></pre>
                                                 <div
                                                     class="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/30 text-emerald-800 dark:text-emerald-200 text-[10px]">
@@ -1253,10 +1416,17 @@
                                     <i class="fa-solid fa-key text-blue-500"></i>
                                     <span x-text="t('change_password')">Change Password</span>
                                 </h3>
+                                <!-- Force change banner -->
+                                <div x-show="forceChange" x-cloak
+                                    class="mb-4 flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 text-amber-800 dark:text-amber-200 text-xs">
+                                    <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 shrink-0"></i>
+                                    <span x-text="t('force_password_change_msg')"></span>
+                                </div>
                                 <form @submit.prevent="changePassword" class="space-y-4">
-                                    <div>
+                                    <div x-show="!forceChange">
                                         <input type="password" autocomplete="current-password"
-                                            x-model="settingsForm.oldPassword" :placeholder="t('old_password')" required
+                                            x-model="settingsForm.oldPassword" :placeholder="t('old_password')"
+                                            :required="!forceChange"
                                             class="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                                     </div>
                                     <div>

@@ -5,14 +5,76 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-function minifyLocales() {
+function syncAndMinifyLocales() {
   const localesDir = './static/locales';
+  const sourceFile = 'en.json';
+  const sourcePath = path.join(localesDir, sourceFile);
+  
+  if (!fs.existsSync(sourcePath)) return;
+  let sourceData = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
+
+  // Sort en.json itself first
+  const sortedSource = {};
+  Object.keys(sourceData).sort().forEach(k => { sortedSource[k] = sourceData[k]; });
+  if (JSON.stringify(sourceData) !== JSON.stringify(sortedSource)) {
+    fs.writeFileSync(sourcePath, JSON.stringify(sortedSource, null, 4), 'utf8');
+    sourceData = sortedSource;
+    console.log(`  sync  ${sourceFile}: sorted keys A-Z`);
+  }
+
   const files = fs.readdirSync(localesDir);
   for (const file of files) {
     if (file.endsWith('.json') && !file.endsWith('.min.json')) {
       const filePath = path.join(localesDir, file);
+      let content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+      // Sync if not the source file
+      if (file !== sourceFile) {
+        let addedKeys = [];
+        let removedKeys = [];
+        
+        const syncObjects = (src, tgt, prefix = '') => {
+          const res = {};
+          
+          // Add/Update keys from source
+          Object.keys(src).forEach(k => {
+            const fullKey = prefix ? `${prefix}.${k}` : k;
+            if (tgt[k] === undefined) {
+              res[k] = src[k];
+              addedKeys.push(fullKey);
+            } else if (typeof src[k] === 'object' && src[k] !== null && !Array.isArray(src[k])) {
+              res[k] = syncObjects(src[k], tgt[k] || {}, fullKey);
+            } else {
+              res[k] = tgt[k];
+            }
+          });
+
+          // Check for keys to remove (present in tgt but not in src)
+          Object.keys(tgt).forEach(k => {
+            const fullKey = prefix ? `${prefix}.${k}` : k;
+            if (src[k] === undefined) {
+              removedKeys.push(fullKey);
+            }
+          });
+
+          return res;
+        };
+
+        const syncedContent = syncObjects(sourceData, content);
+        if (addedKeys.length > 0 || removedKeys.length > 0) {
+          if (addedKeys.length > 0) console.log(`  sync  ${file}: added ${addedKeys.length} keys (${addedKeys.slice(0, 5).join(', ')}${addedKeys.length > 5 ? '...' : ''})`);
+          if (removedKeys.length > 0) console.log(`  sync  ${file}: removed ${removedKeys.length} keys (${removedKeys.slice(0, 5).join(', ')}${removedKeys.length > 5 ? '...' : ''})`);
+          
+          // Sort keys
+          const sorted = {};
+          Object.keys(syncedContent).sort().forEach(k => { sorted[k] = syncedContent[k]; });
+          content = sorted;
+          fs.writeFileSync(filePath, JSON.stringify(content, null, 4), 'utf8');
+        }
+      }
+
+      // Minify
       const minPath = path.join(localesDir, file.replace('.json', '.min.json'));
-      const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
       fs.writeFileSync(minPath, JSON.stringify(content));
     }
   }
@@ -74,7 +136,7 @@ async function main() {
 
   const tasks = [
     wrap('tailwind', buildTailwind),
-    wrap('locales', () => Promise.resolve(minifyLocales())),
+    wrap('locales', () => Promise.resolve(syncAndMinifyLocales())),
     ...allBuilds.map(({ in: entryPoint, out: outfile, bundle }) =>
       wrap(outfile, () => esbuild.build({
         entryPoints: [entryPoint],

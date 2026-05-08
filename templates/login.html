@@ -68,7 +68,7 @@
         <div @click.outside="if(modal.type==='alert') closeUIModal(null)"
             class="glass-menu w-[90%] max-w-sm rounded-[2rem] p-6 shadow-2xl animate-modal-in border border-white/20">
             <h3 class="text-xl font-bold mb-2 text-slate-900 dark:text-white" x-text="modal.title"></h3>
-            <p class="text-slate-600 dark:text-slate-300 text-sm mb-5" x-text="modal.message" x-show="modal.message">
+            <p class="text-slate-600 dark:text-slate-300 text-sm mb-5" x-html="modal.message" x-show="modal.message">
             </p>
             <template x-if="modal.type === 'prompt'">
                 <input :type="modal.inputType || 'text'" x-model="modal.input" x-ref="modalInput" @keydown.enter="closeUIModal(modal.input)"
