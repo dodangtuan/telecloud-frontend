@@ -1417,9 +1417,15 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
                 }
 
                 // Create a stable task ID based on file metadata to support resuming
-                const fileIdStr = `${file.name}_${file.size}_${file.lastModified}`;
-                // Safely handle Unicode characters (like Vietnamese) for btoa
-                const taskId = 'task_' + btoa(unescape(encodeURIComponent(fileIdStr))).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+                const generateHash = (str) => {
+                    let hash = 0;
+                    for (let j = 0; j < str.length; j++) {
+                        hash = ((hash << 5) - hash) + str.charCodeAt(j);
+                        hash |= 0;
+                    }
+                    return Math.abs(hash).toString(36);
+                };
+                const taskId = 'task_' + generateHash(file.name) + '_' + file.size + '_' + file.lastModified;
                 
                 // Check if a task with the same ID already exists in the queue
                 const existingTaskIndex = this.uploadQueue.findIndex(t => t.id === taskId);
@@ -1786,6 +1792,14 @@ function cloudApp(initialIsLoggedIn, isAdmin = true, storageUsed = 0, webdavEnab
             const thumbUrl = `/api/files/${file.id}/thumb`;
             
             if (imgExts.includes(ext)) { 
+                if (file.size > 10 * 1024 * 1024) {
+                    let largeMediaHtml = '';
+                    if (file.has_thumb) {
+                        largeMediaHtml = '<img src="' + thumbUrl + '" alt="' + file.filename + '" class="max-h-64 object-contain rounded-[1rem] w-full shadow-md opacity-60 blur-[2px]" onerror="this.style.display=\'none\'">';
+                    }
+                    this.fileInfoModal = { show: true, file: file, typeName: typeData.n, ext: typeData.ext || '', svgIcon: typeData.i, bgColor: typeData.c, isMedia: !!file.has_thumb, mediaHtml: largeMediaHtml, isLarge: true, isPreviewLoading: false, needsLoad: false, tooLarge: true };
+                    return;
+                }
                 mediaHtml = '<img src="' + streamUrl + '" alt="' + file.filename + '" class="max-h-64 object-contain rounded-[1rem] w-full shadow-md">'; 
                 isMedia = true; 
             } else if (videoExts.includes(ext)) {
@@ -2351,6 +2365,14 @@ function shareApp(shareToken) {
             const thumbUrl = `/s/${this.shareToken}/file/${file.id}/thumb`;
             
             if (imgExts.includes(ext)) { 
+                if (file.size > 10 * 1024 * 1024) {
+                    let largeMediaHtml = '';
+                    if (file.has_thumb) {
+                        largeMediaHtml = '<img src="' + thumbUrl + '" alt="' + file.filename + '" class="max-h-64 object-contain rounded-[1rem] w-full shadow-md opacity-60 blur-[2px]" onerror="this.style.display=\'none\'">';
+                    }
+                    this.fileInfoModal = { show: true, file: file, typeName: typeData.n, ext: typeData.ext || '', svgIcon: typeData.i, bgColor: typeData.c, isMedia: !!file.has_thumb, mediaHtml: largeMediaHtml, isLarge: true, isPreviewLoading: false, needsLoad: false, tooLarge: true };
+                    return;
+                }
                 mediaHtml = '<img src="' + streamUrl + '" alt="' + file.filename + '" class="max-h-64 object-contain rounded-[1rem] w-full shadow-md">'; 
                 isMedia = true; 
             } else if (videoExts.includes(ext)) {
